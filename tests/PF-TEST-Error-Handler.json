@@ -1,0 +1,57 @@
+{
+  "name": "PF - TEST - Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prueba-error-pf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2373c5eb-43f8-4cf8-866b-f73e3117aeaa",
+      "name": "Webhook - Prueba Error"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Prueba controlada PF-07 - caída simulada de API externa"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ca4901cc-a6d2-404f-a6a0-05fae93a3f67",
+      "name": "Stop And Error - Simular Falla"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Prueba Error": {
+      "main": [
+        [
+          {
+            "node": "Stop And Error - Simular Falla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
