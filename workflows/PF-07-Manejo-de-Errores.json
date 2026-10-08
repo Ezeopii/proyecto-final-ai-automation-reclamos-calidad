@@ -1,0 +1,130 @@
+{
+  "name": "PF - 07 - Manejo de Errores",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "01490ea0-e3f2-4b35-81f1-541dd83a29d6",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "762be0ec-5b9e-4c77-8e39-024ddf203251",
+              "name": "workflowNombre",
+              "value": "={{ $json.workflow?.name || 'Workflow no identificado' }}",
+              "type": "string"
+            },
+            {
+              "id": "cefdb6c8-512a-4f61-a0b9-39e10568119a",
+              "name": "workflowId",
+              "value": "={{ $json.workflow?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "5d3086dd-4255-4c7c-ae82-131a89fb4db2",
+              "name": "executionId",
+              "value": "={{ $json.execution?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "16771374-0142-4d85-9fa4-6a80c8cb1b51",
+              "name": "ultimoNodo",
+              "value": "={{ $json.execution?.lastNodeExecuted || 'No disponible' }}",
+              "type": "string"
+            },
+            {
+              "id": "5aa5e841-4daa-40b3-b369-0dca915aae5f",
+              "name": "mensajeError",
+              "value": "={{ $json.execution?.error?.message || $json.error?.message || 'Error sin detalle disponible' }}",
+              "type": "string"
+            },
+            {
+              "id": "595b13f8-417a-4f43-8aa0-7102785c54a7",
+              "name": "modoEjecucion",
+              "value": "={{ $json.execution?.mode || 'No disponible' }}",
+              "type": "string"
+            },
+            {
+              "id": "a85fa58a-f19d-429d-bb45-1d46ba0bf970",
+              "name": "fechaError",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4a6fbd04-b29e-4dd9-a228-7db3fd3e694f",
+      "name": "Preparar Alerta de Error"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_SLACK_ALERT_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "canal-alertas-calidad"
+        },
+        "text": "={{ '🚨 *ERROR TÉCNICO DETECTADO*\\n' + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n' +  '📌 *Workflow afectado*\\n' + '• Nombre: `' + $json.workflowNombre + '`\\n' + '• Workflow ID: `' + ($json.workflowId || 'No disponible') + '`\\n\\n' +  '⚙️ *Detalle de la ejecución*\\n' + '• Execution ID: `' + ($json.executionId || 'No disponible') + '`\\n' + '• Último nodo ejecutado: `' + ($json.ultimoNodo || 'No disponible') + '`\\n' + '• Modo: `' + ($json.modoEjecucion || 'No disponible') + '`\\n\\n' +  '⚠️ *Error detectado*\\n' + ($json.mensajeError || 'No se recibió detalle del error.') + '\\n\\n' +  '🕐 *Fecha*\\n' + $json.fechaError + '\\n\\n' +  '🔒 *Estado*\\n' + 'La ejecución fue interrumpida y requiere revisión técnica antes de continuar.' }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        416,
+        0
+      ],
+      "id": "f0e92f08-15e0-4f89-a5a2-1681d498ae86",
+      "name": "Slack - Alerta Error Técnico"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Preparar Alerta de Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Alerta de Error": {
+      "main": [
+        [
+          {
+            "node": "Slack - Alerta Error Técnico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}

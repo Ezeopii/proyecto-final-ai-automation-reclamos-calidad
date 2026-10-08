@@ -1,0 +1,219 @@
+{
+  "name": "PF - 02 - Worker Documental",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "traceId"
+            },
+            {
+              "name": "requestId"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "912a6b1d-3793-4c2b-b7dd-38b0cc7e668b",
+      "name": "Entrada - Desde Manager"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "poe_cliente_demo",
+        "toolDescription": "Consulta el POE de Cliente Demo para responder preguntas sobre procedimientos operativos, responsabilidades, plazos, documentación, logística inversa, facturación y condiciones del servicio",
+        "memoryKey": {
+          "__rl": true,
+          "value": "poe_cliente_demo_pf",
+          "mode": "list",
+          "cachedResultName": "poe_cliente_demo_pf"
+        },
+        "topK": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        192
+      ],
+      "id": "0b67b770-f0e6-4944-bcb5-e701395de691",
+      "name": "Query Data Tool"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        384,
+        400
+      ],
+      "id": "ecf4259b-0870-449d-8c69-e0d87e76c20e",
+      "name": "Embeddings Google Gemini1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n{{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\n\\nCONSULTA DOCUMENTAL:\\n' + $json.mensaje\n}}\n  ",
+        "options": {
+          "systemMessage": "\nROL\n\nSos un especialista en consultas documentales sobre el POE de Cliente Demo.\n\nOBJETIVO\n\nResponder exclusivamente la pregunta realizada utilizando información verificada mediante la herramienta poe_cliente_demo.\n\nBÚSQUEDA DOCUMENTAL\n\n1. Identificá qué dato específico solicita el usuario.\n\n2. Consultá obligatoriamente la herramienta poe_cliente_demo antes de responder.\n\n3. Formulá la búsqueda utilizando los conceptos específicos de la consulta y sus equivalentes documentales.\n\nEjemplos de criterios de búsqueda:\n- Facturación: tarifas, cargos, costos, seguros y condiciones comerciales.\n- Rechazos: rechazo de mercadería, devolución y retorno.\n- Plazos: tiempos de entrega, recolección y distribución.\n- Logística inversa: RMA y requisitos de devolución.\n\n4. Si el primer resultado no responde directamente la pregunta, realizá una segunda búsqueda con términos diferentes y más específicos.\n\n5. Si todavía no encontrás el dato solicitado, realizá una última búsqueda centrada en la sección documental relacionada.\n\n6. Realizá como máximo tres búsquedas por consulta.\n\nVALIDACIÓN\n\n- Utilizá exclusivamente los fragmentos recuperados.\n- Antes de responder, comprobá que el fragmento contiene el dato exacto solicitado.\n- No confundas instrucciones operativas con condiciones comerciales.\n- Si preguntan qué se factura, respondé únicamente con información que establezca los conceptos facturables.\n- No sustituyas una respuesta faltante por información relacionada.\n- No inventes ni completes datos mediante conocimiento general.\n- No tomes decisiones sobre responsabilidad, seguros, pagos o cierre definitivo.\n\nFUENTES\n\n- Toda respuesta documental debe indicar la fuente utilizada.\n- Citá únicamente metadatos realmente recuperados, como source, document_type, página o sección, cuando estén disponibles.\n- Nunca inventes páginas, secciones o versiones.\n\nSIN INFORMACIÓN\n\nSi después de consultar la herramienta no encontrás respaldo documental suficiente para responder la pregunta exacta, respondé únicamente:\n\nNo sé\n\nNo agregues explicaciones ni alternativas.\n\n\nCONTROL DE REFERENCIAS DOCUMENTALES\n\n- Citá únicamente referencias que estén identificadas explícitamente en los metadatos recuperados.\n- El campo \"source\" identifica el documento de origen.\n- El campo \"loc.lines\" identifica la ubicación por líneas.\n- El campo \"totalPages\" indica la cantidad total de páginas del PDF, NO la página específica de un fragmento.\n- No confundas números presentes en el contenido (tarifas, fórmulas, fechas o cantidades) con números de página.\n- Nunca deduzcas la página a partir del texto.\n- Si no hay un metadato explícito de página, citá solamente el nombre del documento y, si corresponde, las líneas recuperadas.\n- Si no podés verificar una referencia, omitila.\n  \n  \n  ",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f7409fe8-da56-46ff-b1d7-ca0585e7356f",
+      "name": "Agente RAG - Consulta POE"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "maxTokens": -1,
+          "maxRetries": 7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        256
+      ],
+      "id": "f449e7c4-3eb7-4f71-bcc4-d0ffecf970e3",
+      "name": "OpenRouter Chat Model2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ca38570-28f5-4946-b776-c4c85c742cd7",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "ae3a03d8-431b-40db-a040-325441d8c836",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "f69d872b-1a44-43ad-bb07-c26422aa478b",
+              "name": "consultaOriginal",
+              "value": "={{ $('Entrada - Desde Manager').first().json.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "852dbfc6-8a79-4e43-b10e-60dd4216715e",
+              "name": "ruta",
+              "value": "CONSULTAR_DOCUMENTACION",
+              "type": "string"
+            },
+            {
+              "id": "768c0413-20cc-4d20-af9f-0bc627b50a1f",
+              "name": "respuestaPropuesta",
+              "value": "={{ $('Agente RAG - Consulta POE').first().json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "28da77ff-ff20-4961-b4eb-35ab4b25efe3",
+              "name": "contextoVerificable",
+              "value": "={{ JSON.stringify($('Agente RAG - Consulta POE').first().json.intermediateSteps || []) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        0
+      ],
+      "id": "d724b991-d911-4f7c-9d4a-03191e4e8440",
+      "name": "Preparar Salida - Documental"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Query Data Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente RAG - Consulta POE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Query Data Tool",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente RAG - Consulta POE": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida - Documental",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente RAG - Consulta POE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada - Desde Manager": {
+      "main": [
+        [
+          {
+            "node": "Agente RAG - Consulta POE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

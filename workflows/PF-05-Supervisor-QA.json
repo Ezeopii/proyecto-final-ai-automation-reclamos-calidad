@@ -1,0 +1,2191 @@
+{
+  "name": "PF - 05 - Supervisor QA",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "traceId"
+            },
+            {
+              "name": "requestId"
+            },
+            {
+              "name": "consultaOriginal"
+            },
+            {
+              "name": "ruta"
+            },
+            {
+              "name": "respuestaPropuesta"
+            },
+            {
+              "name": "contextoVerificable"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f0b8ad26-3293-4a1f-98b0-fe45c41a48db",
+      "name": "Entrada - Desde Manager"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n{{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\nRUTA: ' + $json.ruta +\n'\\n\\nCONSULTA ORIGINAL:\\n' + $json.consultaOriginal +\n'\\n\\nCONTEXTO VERIFICABLE:\\n' +\n($json.contextoVerificable || 'SIN EVIDENCIA DISPONIBLE') +\n'\\n\\nRESPUESTA PROPUESTA:\\n' + $json.respuestaPropuesta\n}}\n  ",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\nROL\n\nSos el Supervisor de Calidad de un sistema agéntico empresarial para la Gestión de Reclamos de Calidad.\n\nOBJETIVO\n\nEvaluar la respuesta propuesta por un especialista antes de permitir acciones externas o registros definitivos.\n\nFUENTES DE EVALUACIÓN\n\n- Consulta original.\n- Información explícita proporcionada por el usuario.\n- Contexto verificable y documentación recuperada.\n- Respuesta propuesta.\n\nNo uses conocimiento externo ni inventes evidencia.\n\nCRITERIOS DE EVALUACIÓN\n\nEXACTITUD FACTUAL (1 A 5)\n\n5: Responde correctamente, con respaldo suficiente y sin errores.\n\n4: Respuesta correcta y respaldada, con omisiones menores no críticas.\n\n3: Respuesta parcialmente correcta, incompleta o que necesita revisión.\n\n2: No responde adecuadamente o presenta afirmaciones importantes sin respaldo.\n\n1: Contradice la evidencia, inventa datos relevantes o propone decisiones peligrosas.\n\nREGLAS DE SEGURIDAD\n\n- No aceptes afirmaciones documentales si no existe evidencia verificable suficiente.\n- No confundas una cita escrita por el agente con una fuente efectivamente recuperada.\n- Para análisis y redacción, contrastá los hechos exclusivamente con la solicitud original y los datos aportados.\n- No aceptes responsabilidades atribuidas sin prueba, pagos, indemnizaciones, coberturas de seguro o cierres definitivos.\n- No aceptes borradores con datos ficticios o marcadores pendientes que puedan enviarse por error.\n- Si el contexto es insuficiente para verificar una afirmación, asigná como máximo 3.\n- Una respuesta \"No sé\" puede ser correcta cuando la falta de cobertura documental esté verificada.\n- Los fallos técnicos de recuperación no demuestran ausencia documental.\n\nVEREDICTO\n\n4 o 5: ACEPTADO, únicamente si no hay errores críticos y existe evidencia suficiente.\n\n3: CORREGIR.\n\n1 o 2: RECHAZADO.\n\nLas respuestas CORREGIR y RECHAZADO requieren revisión humana antes de autorizar acciones externas.\n\nAUDITORÍA\n\nDevolvé una evaluación estructurada con:\n- exactitud_factual\n- estado_veredicto\n- fundamento\n- evidencia_utilizada\n- errores_detectados\n\nEl fundamento debe justificar la nota.\nLa evidencia utilizada debe identificar información realmente disponible.\nLos errores detectados deben señalar problemas concretos.\n\nNo inventes fuentes ni evidencias.\n  "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "042eeb6b-63f0-4d6e-b328-e3525cb3935e",
+      "name": "AI Judge - Evaluar Respuesta"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ],
+      "id": "80f297ad-cd23-45fa-b937-44e7d708a75a",
+      "name": "OpenRouter Chat Model - Judge"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"exactitud_factual\": {\n      \"type\": \"integer\",\n      \"minimum\": 1,\n      \"maximum\": 5\n    },\n    \"estado_veredicto\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ACEPTADO\",\n        \"CORREGIR\",\n        \"RECHAZADO\"\n      ]\n    },\n    \"fundamento\": {\n      \"type\": \"string\"\n    },\n    \"evidencia_utilizada\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"errores_detectados\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"exactitud_factual\",\n    \"estado_veredicto\",\n    \"fundamento\",\n    \"evidencia_utilizada\",\n    \"errores_detectados\"\n  ],\n  \"additionalProperties\": false\n}\n  "
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        208
+      ],
+      "id": "c123087a-aa75-4291-8b57-18639787bfa1",
+      "name": "Structured Output - Veredicto QA"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.fields.Estado_Veredicto === 'ACEPTADO' && Number($json.fields.Exactitud_Factual) >= 4 ? 'ACEPTADO' : 'OTRO' }}",
+                    "rightValue": "ACEPTADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "41f589ee-a324-494e-aac5-4610c276dd0c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ACEPTADO"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5343d03f-ba81-4ba5-8553-f80a441de2df",
+                    "leftValue": "={{ $json.fields.Estado_Veredicto === 'CORREGIR' && Number($json.fields.Exactitud_Factual) === 3 ? 'CORREGIR' : 'OTRO' }}",
+                    "rightValue": "CORREGIR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CORREGIR"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7a1c2bf0-5a63-4c1d-951e-c9bed6089716",
+                    "leftValue": "={{ $json.fields.Estado_Veredicto === 'RECHAZADO' && Number($json.fields.Exactitud_Factual) >= 1 && Number($json.fields.Exactitud_Factual) <= 2 ? 'RECHAZADO' : 'OTRO' }}",
+                    "rightValue": "RECHAZADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RECHAZADO"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "cd3c0a4d-8472-40f4-9547-98a2b1587437",
+      "name": "Switch - Veredicto QA"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "36ba81bb-cd0c-4211-940c-7d483b49a2b5",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "cd201fae-796f-46a3-82bf-1a348f5ad964",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "b41277d2-0466-443d-826b-93b39d4527a8",
+              "name": "estadoQA",
+              "value": "ACEPTADO",
+              "type": "string"
+            },
+            {
+              "id": "bd5fb32c-5127-4da6-8c61-b85dbdda7077",
+              "name": "aprobado",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "915a2c74-847b-4b93-b479-016f545479c8",
+              "name": "respuestaValidada",
+              "value": "={{ $('Entrada - Desde Manager').first().json.respuestaPropuesta }}",
+              "type": "string"
+            },
+            {
+              "id": "8abb7b23-3f67-413c-adb9-99e496f1b8e7",
+              "name": "exactitudFactual",
+              "value": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.exactitud_factual }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "f50b66f4-fa4c-48a6-9f48-a38f208ab3d8",
+      "name": "Preparar Resultado QA - Aceptado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9b8f59db-d558-4b2a-9580-e2f8cb56a84d",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "22966607-b224-4b9e-9642-9d9617d1d1b6",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "e54068d4-9de0-4681-a8f9-8012ffe4c1d4",
+              "name": "estadoQA",
+              "value": "PENDIENTE_REVISION_HUMANA",
+              "type": "string"
+            },
+            {
+              "id": "8ae54f7a-7a80-48a6-bc75-cba74290bbeb",
+              "name": "aprobado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "218c3d62-b553-4f8f-950e-8ff503a8b62f",
+              "name": "respuestaValidada",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8363dfac-6541-4536-af2a-8ed589e0efbd",
+              "name": "motivoBloqueo",
+              "value": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.fundamento || 'Evaluación inconsistente. Requiere revisión humana.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        176
+      ],
+      "id": "3e8c40c3-2709-4114-b200-ccdda723a93d",
+      "name": "Preparar Resultado QA - Bloqueado"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_QA_LOG",
+          "mode": "list",
+          "cachedResultName": "QA_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre_Campo": "={{ 'PF-QA-' + $('Entrada - Desde Manager').first().json.traceId + '-' + $execution.id }}",
+            "traceId": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+            "requestId": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+            "Ruta": "={{ $('Entrada - Desde Manager').first().json.ruta }}",
+            "Arquitectura": "PF - Supervisor QA",
+            "Query": "={{ $('Entrada - Desde Manager').first().json.consultaOriginal }}",
+            "Contexto_Airtable": "={{ $('Entrada - Desde Manager').first().json.contextoVerificable || 'SIN EVIDENCIA DISPONIBLE' }}",
+            "Respuesta_Propuesta": "={{ $('Entrada - Desde Manager').first().json.respuestaPropuesta }}",
+            "Exactitud_Factual": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.exactitud_factual }}",
+            "Estado_Veredicto": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.estado_veredicto }}",
+            "Fundamento": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.fundamento }}",
+            "Evidencia_Utilizada": "={{ JSON.stringify($('AI Judge - Evaluar Respuesta').first().json.output.evidencia_utilizada || []) }}",
+            "Errores_Detectados": "={{ JSON.stringify($('AI Judge - Evaluar Respuesta').first().json.output.errores_detectados || []) }}",
+            "Intento": 0,
+            "Costo_USD": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nombre_Campo",
+              "displayName": "Nombre_Campo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Arquitectura",
+              "displayName": "Arquitectura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Query",
+              "displayName": "Query",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contexto_Airtable",
+              "displayName": "Contexto_Airtable",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Respuesta_Propuesta",
+              "displayName": "Respuesta_Propuesta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Exactitud_Factual",
+              "displayName": "Exactitud_Factual",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado_Veredicto",
+              "displayName": "Estado_Veredicto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Costo_USD",
+              "displayName": "Costo_USD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intento",
+              "displayName": "Intento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Categoria_Error",
+              "displayName": "Categoria_Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sesion",
+              "displayName": "Sesion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ruta",
+              "displayName": "Ruta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fundamento",
+              "displayName": "Fundamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Evidencia_Utilizada",
+              "displayName": "Evidencia_Utilizada",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores_Detectados",
+              "displayName": "Errores_Detectados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        0
+      ],
+      "id": "380ff951-6a71-4239-9e3f-aa925f15a0f6",
+      "name": "Registrar Auditoría QA - Airtable"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "919ce8be-732b-4a9e-8bfd-9298a6e8bbe8",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "10351f43-8002-4771-80ae-9411e284e235",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "0f37ea72-e4e4-490f-b5f3-f3f43d8be088",
+              "name": "consultaOriginal",
+              "value": "={{ $('Entrada - Desde Manager').first().json.consultaOriginal }}",
+              "type": "string"
+            },
+            {
+              "id": "ceca0b47-008c-4539-9cc3-d32870081539",
+              "name": "ruta",
+              "value": "={{ $('Entrada - Desde Manager').first().json.ruta }}",
+              "type": "string"
+            },
+            {
+              "id": "b59f4842-1893-4f73-a0b1-c346af116230",
+              "name": "respuestaAnterior",
+              "value": "={{ $('Entrada - Desde Manager').first().json.respuestaPropuesta }}",
+              "type": "string"
+            },
+            {
+              "id": "8a1dba0b-3179-49db-8ff1-25ae75e5b466",
+              "name": "contextoVerificable",
+              "value": "={{ $('Entrada - Desde Manager').first().json.contextoVerificable }}",
+              "type": "string"
+            },
+            {
+              "id": "40166834-667e-4f14-923f-c1fe5bb21956",
+              "name": "feedbackSupervisor",
+              "value": "={{ $('AI Judge - Evaluar Respuesta').first().json.output.fundamento }}",
+              "type": "string"
+            },
+            {
+              "id": "f7ab1ab4-4ce9-41c8-919f-ca056b137598",
+              "name": "erroresDetectados",
+              "value": "={{ JSON.stringify($('AI Judge - Evaluar Respuesta').first().json.output.errores_detectados || []) }}",
+              "type": "string"
+            },
+            {
+              "id": "40388bef-d1bd-4e79-b901-fd577b4dd335",
+              "name": "intento",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        16
+      ],
+      "id": "d34d2bb4-40b0-4185-b97d-dc326533a82f",
+      "name": "Preparar Corrección QA"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\nRUTA: ' + $json.ruta +\n'\\nINTENTO: ' + $json.intento +\n'\\n\\nCONSULTA ORIGINAL:\\n' + $json.consultaOriginal +\n'\\n\\nCONTEXTO VERIFICABLE:\\n' + $json.contextoVerificable +\n'\\n\\nRESPUESTA ANTERIOR:\\n' + $json.respuestaAnterior +\n'\\n\\nFEEDBACK DEL SUPERVISOR:\\n' + $json.feedbackSupervisor +\n'\\n\\nERRORES DETECTADOS:\\n' + $json.erroresDetectados\n}}",
+        "options": {
+          "systemMessage": "ROL\n\nSos un agente de corrección del sistema de Gestión de Reclamos de Calidad.\n\nOBJETIVO\n\nGenerar una única versión corregida de la respuesta anterior utilizando el feedback del Supervisor y solamente la información verificable disponible.\n\nREGLAS\n\n- Corregí únicamente los problemas señalados por el Supervisor.\n- Utilizá exclusivamente la consulta original y el contexto verificable recibido.\n- No inventes hechos, documentos, fechas, importes, responsables ni referencias.\n- No agregues conocimiento externo.\n- No atribuyas responsabilidades.\n- No confirmes pagos, indemnizaciones, coberturas de seguro ni cierres definitivos.\n- No afirmes que se realizaron acciones externas.\n- La respuesta corregida deberá responder directamente a la solicitud original.\n- No expliques el proceso de corrección.\n- No menciones al Supervisor, al Judge ni el intento anterior.\n- Este es el único reintento permitido.\n\nREGLAS SEGÚN LA RUTA\n\nCONSULTAR_DOCUMENTACION:\n- Toda afirmación debe estar respaldada por el contexto documental recuperado.\n- Si el contexto verificable no permite responder la consulta, respondé exactamente:\nNo sé\n- No inventes páginas, secciones ni referencias.\n\nANALIZAR_RECLAMO:\n- Separá claramente información conocida de información faltante.\n- No inventes datos del reclamo.\n- No determines culpabilidad.\n\nREDACTAR_COMUNICACION:\n- Prepará únicamente un borrador.\n- No inventes destinatarios, firmas, nombres ni datos operativos.\n- No dejes marcadores ficticios como [Tu Nombre] o [Tu Cargo].\n- No afirmes que el mensaje fue enviado.\n\nSALIDA\n\nDevolvé solamente la respuesta corregida."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1360,
+        16
+      ],
+      "id": "4052da91-cd18-49d3-91fd-5a31b2527020",
+      "name": "AI Agent - Reintento QA"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        224
+      ],
+      "id": "fe6c76c6-244c-4754-9137-75571ac01273",
+      "name": "OpenRouter Chat Model - Reintento QA"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{\n'TRACE ID: ' + $('Preparar Corrección QA').first().json.traceId +\n'\\nREQUEST ID: ' + $('Preparar Corrección QA').first().json.requestId +\n'\\nRUTA: ' + $('Preparar Corrección QA').first().json.ruta +\n'\\nINTENTO: 1' +\n'\\n\\nCONSULTA ORIGINAL:\\n' + $('Preparar Corrección QA').first().json.consultaOriginal +\n'\\n\\nCONTEXTO VERIFICABLE:\\n' + $('Preparar Corrección QA').first().json.contextoVerificable +\n'\\n\\nRESPUESTA CORREGIDA:\\n' + $('AI Agent - Reintento QA').first().json.output\n}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "ROL\n\nSos el Supervisor de Calidad de un sistema agéntico empresarial para la Gestión de Reclamos de Calidad.\n\nOBJETIVO\n\nEvaluar la respuesta corregida luego del único reintento permitido.\n\nFUENTES DE EVALUACIÓN\n\n- Consulta original.\n- Contexto verificable.\n- Respuesta corregida.\n\nNo utilices conocimiento externo.\nNo inventes evidencia.\n\nEXACTITUD FACTUAL\n\n5: Respuesta correcta, completa y respaldada por la evidencia disponible.\n\n4: Respuesta correcta y respaldada, con omisiones menores no críticas.\n\n3: Respuesta parcialmente correcta o que todavía requiere corrección.\n\n2: Respuesta inadecuada o con afirmaciones importantes sin respaldo.\n\n1: Contradice la evidencia, inventa información o introduce un riesgo crítico.\n\nREGLAS\n\n- Toda afirmación factual debe poder verificarse con la información disponible.\n- No aceptes responsabilidades atribuidas sin evidencia.\n- No aceptes pagos, indemnizaciones, coberturas de seguro o cierres definitivos sin revisión humana.\n- No aceptes datos inventados.\n- No aceptes referencias documentales inexistentes.\n- Para consultas documentales, utilizá exclusivamente el contexto recuperado.\n- Una respuesta \"No sé\" puede ser válida únicamente cuando la evidencia disponible no permite responder.\n- Si existen errores críticos, la respuesta no puede ser ACEPTADA.\n\nVEREDICTO\n\n5 o 4 = ACEPTADO\n3 = CORREGIR\n2 o 1 = RECHAZADO\n\nIMPORTANTE\n\nEste es el único reintento automático permitido.\n\nSi el resultado vuelve a ser CORREGIR o RECHAZADO, el caso debe pasar a revisión humana. No debe generarse otro reintento automático.\n\nSALIDA\n\nDevolvé exclusivamente la evaluación estructurada solicitada por el Output Parser."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1712,
+        16
+      ],
+      "id": "f225f700-68b2-425f-bc21-3889a2ab73b2",
+      "name": "AI Judge - Revalidar Reintento"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        224
+      ],
+      "id": "61464d33-a519-4e0f-a299-06ac22eb27cf",
+      "name": "OpenRouter Chat Model - Judge Reintento"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"exactitud_factual\": {\n      \"type\": \"integer\",\n      \"minimum\": 1,\n      \"maximum\": 5\n    },\n    \"estado_veredicto\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ACEPTADO\",\n        \"CORREGIR\",\n        \"RECHAZADO\"\n      ]\n    },\n    \"fundamento\": {\n      \"type\": \"string\"\n    },\n    \"evidencia_utilizada\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"errores_detectados\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"exactitud_factual\",\n    \"estado_veredicto\",\n    \"fundamento\",\n    \"evidencia_utilizada\",\n    \"errores_detectados\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1856,
+        224
+      ],
+      "id": "7cc4f46f-df31-4696-9c29-10f06a777142",
+      "name": "Structured Output - Revalidación QA"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_QA_LOG",
+          "mode": "list",
+          "cachedResultName": "QA_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre_Campo": "={{ 'PF-QA-R1-' + $('Preparar Corrección QA').first().json.traceId + '-' + $execution.id }}",
+            "Arquitectura": "PF - Supervisor QA",
+            "Query": "={{ $('Preparar Corrección QA').first().json.consultaOriginal }}",
+            "Contexto_Airtable": "={{ $('Preparar Corrección QA').first().json.contextoVerificable }}",
+            "Respuesta_Propuesta": "={{ $('AI Agent - Reintento QA').first().json.output }}",
+            "Exactitud_Factual": "={{ $('AI Judge - Revalidar Reintento').first().json.output.exactitud_factual }}",
+            "Estado_Veredicto": "={{ $('AI Judge - Revalidar Reintento').first().json.output.estado_veredicto }}",
+            "Intento": 1,
+            "traceId": "={{ $('Preparar Corrección QA').first().json.traceId }}",
+            "requestId": "={{ $('Preparar Corrección QA').first().json.requestId }}",
+            "Ruta": "={{ $('Preparar Corrección QA').first().json.ruta }}",
+            "Fundamento": "={{ $('AI Judge - Revalidar Reintento').first().json.output.fundamento }}",
+            "Evidencia_Utilizada": "={{ JSON.stringify($('AI Judge - Revalidar Reintento').first().json.output.evidencia_utilizada || []) }}",
+            "Errores_Detectados": "={{ JSON.stringify($('AI Judge - Revalidar Reintento').first().json.output.errores_detectados || []) }}",
+            "Costo_USD": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nombre_Campo",
+              "displayName": "Nombre_Campo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Arquitectura",
+              "displayName": "Arquitectura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Query",
+              "displayName": "Query",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contexto_Airtable",
+              "displayName": "Contexto_Airtable",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Respuesta_Propuesta",
+              "displayName": "Respuesta_Propuesta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Exactitud_Factual",
+              "displayName": "Exactitud_Factual",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado_Veredicto",
+              "displayName": "Estado_Veredicto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Costo_USD",
+              "displayName": "Costo_USD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intento",
+              "displayName": "Intento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Categoria_Error",
+              "displayName": "Categoria_Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sesion",
+              "displayName": "Sesion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ruta",
+              "displayName": "Ruta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fundamento",
+              "displayName": "Fundamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Evidencia_Utilizada",
+              "displayName": "Evidencia_Utilizada",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores_Detectados",
+              "displayName": "Errores_Detectados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        16
+      ],
+      "id": "95abf33e-1d08-4651-bfd8-c56d8911e206",
+      "name": "Registrar Reintento QA - Airtable"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1bb39c7f-5b67-4cf0-aa0a-12d72d2e14d1",
+              "leftValue": "={{ $('AI Judge - Revalidar Reintento').first().json.output.estado_veredicto === 'ACEPTADO' && Number($('AI Judge - Revalidar Reintento').first().json.output.exactitud_factual) >= 4 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2272,
+        16
+      ],
+      "id": "6bd31fa8-a9a5-49f6-b448-dab60b360805",
+      "name": "¿Reintento Aceptado?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c592218-a062-4f4a-8fc1-94c0d0bc5f86",
+              "name": "traceId",
+              "value": "={{ $('Preparar Corrección QA').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "686bbd30-cbe4-425f-afe6-85e3c6fca14d",
+              "name": "requestId",
+              "value": "={{ $('Preparar Corrección QA').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "da761eef-d4a6-4dec-af05-1a7bda06c9f2",
+              "name": "estadoQA",
+              "value": "ACEPTADO",
+              "type": "string"
+            },
+            {
+              "id": "2dd35184-409f-4028-b88e-ba406aa8526d",
+              "name": "aprobado",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "0b48d9a7-0be2-408d-9198-a5db9c7ee6e8",
+              "name": "respuestaValidada",
+              "value": "={{ $('AI Agent - Reintento QA').first().json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "6999431b-db0a-4e75-ae3c-39504dbae70d",
+              "name": "exactitudFactual",
+              "value": "={{ $('AI Judge - Revalidar Reintento').first().json.output.exactitud_factual }}",
+              "type": "number"
+            },
+            {
+              "id": "4c8db3e9-9a7e-444c-b647-b97436049849",
+              "name": "intento",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2560,
+        -112
+      ],
+      "id": "3a0dc4e8-e08a-4738-85c1-084b1373bd04",
+      "name": "Preparar Resultado QA - Reintento Aceptado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "620c0e4f-8848-4b28-b951-dc1a77ebcebd",
+              "name": "traceId",
+              "value": "={{ $('Preparar Corrección QA').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "2c0f3a18-4815-4348-baf0-013591c33a8a",
+              "name": "requestId",
+              "value": "={{ $('Preparar Corrección QA').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "3573b6ab-8f79-4dde-94f2-4e701d9c5e49",
+              "name": "estadoQA",
+              "value": "PENDIENTE_REVISION_HUMANA",
+              "type": "string"
+            },
+            {
+              "id": "aa410c9d-a3d9-4e48-8d35-b5d7c888e249",
+              "name": "aprobado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "f9207f45-b68d-41ab-9233-d16d8d38fcd1",
+              "name": "respuestaValidada",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "871b3a4a-06b9-49b1-a09a-4e518a081dff",
+              "name": "motivoBloqueo",
+              "value": "={{ $('AI Judge - Revalidar Reintento').first().json.output.fundamento }}",
+              "type": "string"
+            },
+            {
+              "id": "6f094d01-0fbe-4e8e-b610-1b72bc9735f7",
+              "name": "ultimoVeredicto",
+              "value": "={{ $('AI Judge - Revalidar Reintento').first().json.output.estado_veredicto }}",
+              "type": "string"
+            },
+            {
+              "id": "ea55f558-c0eb-44a5-b4c6-c75694bce6b6",
+              "name": "exactitudFactual",
+              "value": "={{ $('AI Judge - Revalidar Reintento').first().json.output.exactitud_factual }}",
+              "type": "number"
+            },
+            {
+              "id": "27c91306-7c7c-42d0-9730-817180d85c65",
+              "name": "intento",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        224
+      ],
+      "id": "6a4f61aa-015a-4b54-ae6b-f8b06997ea53",
+      "name": "Preparar Resultado QA - Reintento Bloqueado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9acd6506-4cfd-41aa-85eb-90ba9d940b79",
+              "name": "traceId",
+              "value": "={{ $json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "ba3db252-59c3-4ddb-b0c1-dfb1833fd807",
+              "name": "requestId",
+              "value": "={{ $json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "8a6dd640-b5ff-4023-be30-d034aabb64b2",
+              "name": "estadoQA",
+              "value": "PENDIENTE_REVISION_HUMANA",
+              "type": "string"
+            },
+            {
+              "id": "b554b571-2850-40fb-a7c5-f78fe6c7d42f",
+              "name": "aprobado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "aa3ad314-d0f4-4ccc-bef8-33f91d96a5ac",
+              "name": "motivoRevision",
+              "value": "={{ $json.motivoBloqueo || 'La respuesta requiere revisión humana.' }}",
+              "type": "string"
+            },
+            {
+              "id": "0939bb86-a04f-4d46-bd0c-dc2018593c0c",
+              "name": "respuestaPropuesta",
+              "value": "={{ $json.fields?.Respuesta_Propuesta || $json.respuestaPropuesta || $('Entrada - Desde Manager').first().json.respuestaPropuesta }}",
+              "type": "string"
+            },
+            {
+              "id": "e780ad7b-8ed5-45ac-88b0-01d16c0eb55f",
+              "name": "consultaOriginal",
+              "value": "={{ $('Entrada - Desde Manager').first().json.consultaOriginal }}",
+              "type": "string"
+            },
+            {
+              "id": "b71ca534-585b-4c1b-bfb2-4220278e225e",
+              "name": "ruta",
+              "value": "={{ $('Entrada - Desde Manager').first().json.ruta }}",
+              "type": "string"
+            },
+            {
+              "id": "a3256cb3-7fc6-4aed-9cbe-1ba0872cca96",
+              "name": "intento",
+              "value": "={{ Number($json.intento || 0) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2656,
+        592
+      ],
+      "id": "ef68f0ab-7bff-477a-ba32-ec687ad15deb",
+      "name": "Preparar Revisión Humana"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "sendAndWait",
+        "user": {
+          "__rl": true,
+          "value": "YOUR_SLACK_REVIEWER_USER_ID",
+          "mode": "list",
+          "cachedResultName": "Revisor de Calidad"
+        },
+        "message": "={{\n'🚨 *REVISIÓN HUMANA REQUERIDA*\\n' +\n'━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n' +\n\n'📌 *Identificación del caso*\\n' +\n'• Trace ID: `' + $json.traceId + '`\\n' +\n'• Request ID: `' + $json.requestId + '`\\n' +\n'• Ruta: `' + $json.ruta + '`\\n' +\n'• Intento automático: ' + $json.intento + '\\n\\n' +\n\n'📝 *Consulta original*\\n' +\n$json.consultaOriginal + '\\n\\n' +\n\n'🤖 *Respuesta propuesta*\\n' +\n$json.respuestaPropuesta + '\\n\\n' +\n\n'⚠️ *Motivo de revisión*\\n' +\n$json.motivoRevision + '\\n\\n' +\n\n'🔒 *Estado*\\n' +\n'La respuesta permanece bloqueada hasta recibir una decisión humana.\\n\\n' +\n\n'Seleccioná *APROBAR* para autorizar la respuesta o *EDITAR* si necesita intervención manual.'\n}}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "APROBAR",
+            "disapproveLabel": "EDITAR"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2848,
+        240
+      ],
+      "id": "9b9f2f8b-46ed-4ac8-8e47-df4f1e838c00",
+      "name": "Slack - Solicitar Revisión Humana"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8747465f-166a-4633-9ce0-6887e964e797",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3056,
+        240
+      ],
+      "id": "0b8ceba3-5b84-41cd-86a6-b4377aed3080",
+      "name": "¿Humano Aprobó?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2c86519-fa51-48a0-92c8-664904387349",
+              "name": "traceId",
+              "value": "={{ $('Preparar Revisión Humana').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "5a87089f-0578-42ae-b563-8960d5007b17",
+              "name": "requestId",
+              "value": "={{ $('Preparar Revisión Humana').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "500c34e1-8ee9-4b9f-9b3b-299e1efcfafd",
+              "name": "estadoQA",
+              "value": "APROBADO_POR_HUMANO",
+              "type": "string"
+            },
+            {
+              "id": "bb18e769-cf62-40c5-b475-c8e844328a23",
+              "name": "aprobado",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "79da2afe-c3c7-44b2-95ab-f2ea3ba2edc9",
+              "name": "respuestaValidada",
+              "value": "={{ $('Preparar Revisión Humana').first().json.respuestaPropuesta }}",
+              "type": "string"
+            },
+            {
+              "id": "2a97e1cc-496b-4bb3-be68-3e0fd8bc1e5f",
+              "name": "decisionHumana",
+              "value": "APROBAR",
+              "type": "string"
+            },
+            {
+              "id": "368acef9-0a3a-48cf-981c-6c149bc61850",
+              "name": "ruta",
+              "value": "={{ $('Preparar Revisión Humana').first().json.ruta }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3280,
+        64
+      ],
+      "id": "895a4802-dfea-4ee9-a39e-d389a3cc3438",
+      "name": "Preparar Resultado QA - Aprobación Humana"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5e0e75d-fbc0-404e-ad5c-9a1c1048a4d5",
+              "name": "traceId",
+              "value": "={{ $('Preparar Revisión Humana').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "8938a836-5236-4709-8248-795b71f1202a",
+              "name": "requestId",
+              "value": "={{ $('Preparar Revisión Humana').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "191cb65a-947d-4e1b-855b-c7287feb04d0",
+              "name": "estadoQA",
+              "value": "PENDIENTE_EDICION_HUMANA",
+              "type": "string"
+            },
+            {
+              "id": "eaa538e8-7c0d-4328-8c00-9420b742d0b1",
+              "name": "aprobado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "6b52dad5-e724-4174-ae7a-f06ebfbc4b0b",
+              "name": "respuestaValidada",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "3355678f-aab0-4bf1-bc99-97c8f4f2599d",
+              "name": "decisionHumana",
+              "value": "EDITAR",
+              "type": "string"
+            },
+            {
+              "id": "4c6ad4c0-7604-4376-a33f-52fd1bb15773",
+              "name": "motivoRevision",
+              "value": "={{ $('Preparar Revisión Humana').first().json.motivoRevision }}",
+              "type": "string"
+            },
+            {
+              "id": "0b6a7ced-86bb-4e07-ad5b-938d328feedb",
+              "name": "ruta",
+              "value": "={{ $('Preparar Revisión Humana').first().json.ruta }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3280,
+        416
+      ],
+      "id": "665ff121-fe83-4f95-b94f-b43857106825",
+      "name": "Preparar Resultado QA - Edición Humana"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_QA_LOG",
+          "mode": "list",
+          "cachedResultName": "QA_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre_Campo": "={{ 'PF-HITL-' + $('Preparar Revisión Humana').first().json.traceId + '-' + $execution.id }}",
+            "Arquitectura": "PF - HITL",
+            "Query": "={{ $('Preparar Revisión Humana').first().json.consultaOriginal }}",
+            "Contexto_Airtable": "=",
+            "Respuesta_Propuesta": "={{ $('Preparar Revisión Humana').first().json.respuestaPropuesta }}",
+            "traceId": "={{ $('Preparar Revisión Humana').first().json.traceId }}",
+            "requestId": "={{ $('Preparar Revisión Humana').first().json.requestId }}",
+            "Ruta": "={{ $('Preparar Revisión Humana').first().json.ruta }}",
+            "Intento": "={{ Number($('Preparar Revisión Humana').first().json.intento || 0) }}",
+            "Decision_Humana": "={{ $json.decisionHumana }}",
+            "Estado_Final": "={{ $json.estadoQA }}",
+            "Estado_Veredicto": "={{ $json.estadoQA }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Nombre_Campo",
+              "displayName": "Nombre_Campo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Arquitectura",
+              "displayName": "Arquitectura",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Query",
+              "displayName": "Query",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contexto_Airtable",
+              "displayName": "Contexto_Airtable",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Respuesta_Propuesta",
+              "displayName": "Respuesta_Propuesta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Exactitud_Factual",
+              "displayName": "Exactitud_Factual",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado_Veredicto",
+              "displayName": "Estado_Veredicto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Costo_USD",
+              "displayName": "Costo_USD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intento",
+              "displayName": "Intento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Categoria_Error",
+              "displayName": "Categoria_Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sesion",
+              "displayName": "Sesion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ruta",
+              "displayName": "Ruta",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fundamento",
+              "displayName": "Fundamento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Evidencia_Utilizada",
+              "displayName": "Evidencia_Utilizada",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Errores_Detectados",
+              "displayName": "Errores_Detectados",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Decision_Humana",
+              "displayName": "Decision_Humana",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado_Final",
+              "displayName": "Estado_Final",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        3616,
+        256
+      ],
+      "id": "788715cc-1f75-4387-9a5e-f58833408779",
+      "name": "Registrar Decisión Humana - Airtable"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d8dce314-b431-4ce0-9503-7adf1ca8ee3e",
+              "leftValue": "={{ $json.fields.Decision_Humana === 'APROBAR' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3840,
+        256
+      ],
+      "id": "9f1bfd43-26ec-4396-a02a-4132b363ff44",
+      "name": "¿Decisión Humana Aprobada?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "784869cf-5718-4872-a677-eb282d9a96aa",
+              "name": "traceId",
+              "value": "={{ $json.traceId || $json.fields?.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "68441245-a532-4a46-a669-bdc236b38867",
+              "name": "requestId",
+              "value": "={{ $json.requestId || $json.fields?.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "67c5a1e0-b859-40c1-a9ac-4d7c0698ca53",
+              "name": "estadoFinal",
+              "value": "AUTORIZADO",
+              "type": "string"
+            },
+            {
+              "id": "e5c6d6e6-ce6a-408f-a1db-345a5981638e",
+              "name": "aprobado",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "423ec7a1-f285-4d12-8940-1f155df0afeb",
+              "name": "respuestaFinal",
+              "value": "={{ $json.respuestaValidada || $json.fields?.Respuesta_Propuesta || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "9fd753d9-dd9a-4c7b-b8f9-d15b1ebc9c24",
+              "name": "origenAprobacion",
+              "value": "={{ $json.decisionHumana === 'APROBAR' || $json.fields?.Decision_Humana === 'APROBAR' ? 'HUMANO' : Number($json.intento || $json.fields?.Intento || 0) === 1 ? 'REINTENTO_QA' : 'QA_AUTOMATICO' }}",
+              "type": "string"
+            },
+            {
+              "id": "93b75dd5-e18d-472a-a3ef-e80c161cde9b",
+              "name": "requiereAccionManual",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4000,
+        -288
+      ],
+      "id": "7e48e259-9819-43c4-aaeb-75150fcac5dd",
+      "name": "Preparar Salida Final - Autorizada"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dac3035c-777f-4cbb-a42e-0e2f47f7a449",
+              "name": "traceId",
+              "value": "={{ $json.fields?.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "2ef429ec-c3d9-4a80-b636-a2385ff93440",
+              "name": "requestId",
+              "value": "={{ $json.fields?.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "f1dd7d1e-5904-4a56-8a6a-0ddcbcdbbf5b",
+              "name": "estadoFinal",
+              "value": "PENDIENTE_EDICION_HUMANA",
+              "type": "string"
+            },
+            {
+              "id": "4eda2fae-47d7-4132-95f9-ef23d7b088a0",
+              "name": "aprobado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "791f4599-5cfd-424e-9631-4018c4ca792d",
+              "name": "respuestaFinal",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b9a04386-ba91-4400-87a4-a3a892455a88",
+              "name": "origenAprobacion",
+              "value": "HUMANO",
+              "type": "string"
+            },
+            {
+              "id": "e7c387bc-8cb0-4864-8e03-8da190a3a495",
+              "name": "requiereAccionManual",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4048,
+        352
+      ],
+      "id": "7c0abbe4-999f-438c-b3c5-cb10d073cb29",
+      "name": "Preparar Salida Final - Bloqueada"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc29709f-f3cd-494c-8505-075f5ce49a18",
+              "name": "traceId",
+              "value": "={{ $json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "27999782-ca18-4b8f-8a75-ce13f9e0dd55",
+              "name": "requestId",
+              "value": "={{ $json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "70a7d97c-5d30-4996-b7c0-80cdc0453d7f",
+              "name": "estadoFinal",
+              "value": "={{ $json.estadoFinal }}",
+              "type": "string"
+            },
+            {
+              "id": "00fc214f-4ed7-4a99-9e1c-55e4f17673e3",
+              "name": "aprobado",
+              "value": "={{ $json.aprobado }}",
+              "type": "boolean"
+            },
+            {
+              "id": "1c765356-2b87-49f0-8902-1403f4cbdf09",
+              "name": "respuestaFinal",
+              "value": "={{ $json.respuestaFinal || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d6494259-b6cd-45d0-90c7-1b6e09850ed9",
+              "name": "origenAprobacion",
+              "value": "={{ $json.origenAprobacion || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1bd20c7a-06e7-475b-bf57-aa7e784f8f71",
+              "name": "requiereAccionManual",
+              "value": "={{ $json.requiereAccionManual }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4496,
+        64
+      ],
+      "id": "24739d24-9a2d-45ea-b053-217c25caa201",
+      "name": "Salida PF-05 - Supervisor"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada - Desde Manager": {
+      "main": [
+        [
+          {
+            "node": "AI Judge - Evaluar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Judge": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Judge - Evaluar Respuesta",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output - Veredicto QA": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Judge - Evaluar Respuesta",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Judge - Evaluar Respuesta": {
+      "main": [
+        [
+          {
+            "node": "Registrar Auditoría QA - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Veredicto QA": {
+      "main": [
+        [
+          {
+            "node": "Preparar Resultado QA - Aceptado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Corrección QA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Resultado QA - Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Resultado QA - Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Auditoría QA - Airtable": {
+      "main": [
+        [
+          {
+            "node": "Switch - Veredicto QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Corrección QA": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Reintento QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Reintento QA": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Reintento QA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Reintento QA": {
+      "main": [
+        [
+          {
+            "node": "AI Judge - Revalidar Reintento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Judge Reintento": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Judge - Revalidar Reintento",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output - Revalidación QA": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Judge - Revalidar Reintento",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Judge - Revalidar Reintento": {
+      "main": [
+        [
+          {
+            "node": "Registrar Reintento QA - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Reintento QA - Airtable": {
+      "main": [
+        [
+          {
+            "node": "¿Reintento Aceptado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Reintento Aceptado?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Resultado QA - Reintento Aceptado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Resultado QA - Reintento Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Reintento Bloqueado": {
+      "main": [
+        [
+          {
+            "node": "Preparar Revisión Humana",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Preparar Salida Final - Autorizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Bloqueado": {
+      "main": [
+        [
+          {
+            "node": "Preparar Revisión Humana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Revisión Humana": {
+      "main": [
+        [
+          {
+            "node": "Slack - Solicitar Revisión Humana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Solicitar Revisión Humana": {
+      "main": [
+        [
+          {
+            "node": "¿Humano Aprobó?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Humano Aprobó?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Resultado QA - Aprobación Humana",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Resultado QA - Edición Humana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Aprobación Humana": {
+      "main": [
+        [
+          {
+            "node": "Registrar Decisión Humana - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Edición Humana": {
+      "main": [
+        [
+          {
+            "node": "Registrar Decisión Humana - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Decisión Humana - Airtable": {
+      "main": [
+        [
+          {
+            "node": "¿Decisión Humana Aprobada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Reintento Aceptado": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida Final - Autorizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Decisión Humana Aprobada?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida Final - Autorizada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Salida Final - Bloqueada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Salida Final - Autorizada": {
+      "main": [
+        [
+          {
+            "node": "Salida PF-05 - Supervisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Salida Final - Bloqueada": {
+      "main": [
+        [
+          {
+            "node": "Salida PF-05 - Supervisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resultado QA - Aceptado": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida Final - Autorizada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

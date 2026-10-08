@@ -1,0 +1,160 @@
+{
+  "name": "PF - 03 - Worker Análisis de Reclamos",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "traceId"
+            },
+            {
+              "name": "requestId"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cd2280bf-a408-4fb1-baf6-d3ed1721ac70",
+      "name": "Entrada - Desde Manager"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n{{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\n\\nRECLAMO RECIBIDO:\\n' + $json.mensaje\n}}\n  ",
+        "options": {
+          "systemMessage": "\nROL\n\nSos un especialista en análisis inicial de Reclamos de Calidad de una empresa logística.\n\nOBJETIVO\n\nAnalizar el reclamo recibido, identificar la información disponible, detectar datos faltantes y proponer los próximos pasos para que el área de Calidad pueda gestionar el caso.\n\nALCANCE\n\nPodés analizar reclamos relacionados con:\n- Mercadería dañada.\n- Faltantes de mercadería.\n- Entregas rechazadas.\n- Incumplimientos de servicio.\n- Errores operativos.\n- Diferencias en documentación.\n\nREGLAS\n\n- Analizá solamente la información recibida.\n- No inventes datos ni completes información mediante suposiciones.\n- Diferenciá claramente los hechos informados de los datos pendientes de verificar.\n- No atribuyas responsabilidades.\n- No confirmes coberturas de seguros ni indemnizaciones.\n- No autorices pagos, devoluciones ni compensaciones.\n- No determines el cierre definitivo del reclamo.\n- No afirmes que se realizaron acciones externas.\n- No cites procedimientos o contratos que no hayas consultado.\n- Si falta documentación, señalá que debe verificarse.\n- Las decisiones importantes corresponden al área de Calidad.\n- Tu respuesta es una propuesta interna pendiente de supervisión.\n\nFORMATO DE RESPUESTA\n\nPresentá un análisis breve y claro, con estas secciones:\n\n1. Resumen del reclamo:\nExplicá qué sucedió según la información recibida.\n\n2. Información disponible:\nIndicá cliente, operación, incidente y datos conocidos. Si un dato no fue informado, aclaralo.\n\n3. Información faltante:\nIdentificá qué datos o documentos necesitamos para analizar el caso (por ejemplo número de envío, remito, fecha, fotografías, descripción de daños o valor de mercadería).\n\n4. Próximos pasos sugeridos:\nProponé acciones iniciales de recopilación y verificación de información, sin ejecutar ninguna.\n\n5. Revisión humana:\nIndicá qué cuestiones requieren evaluación del área de Calidad.\n\nRespondé en español, de manera clara, operativa y sin información inventada.\n  "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "20a09864-137a-4d88-bd77-125397bcc633",
+      "name": "Analizador - Evaluar Reclamo"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ],
+      "id": "d960e0a7-146c-4863-bb5d-8d59f4782627",
+      "name": "OpenRouter Chat Model - Analizador"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a30bda1d-ab83-46de-a2be-2fd5116e50c5",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "37c99fc6-b2b0-4ea7-b461-bdb84215bd3a",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "8b8460db-5e88-4e94-bda0-4037b447a29b",
+              "name": "consultaOriginal",
+              "value": "={{ $('Entrada - Desde Manager').first().json.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "4b617390-0373-440e-9c45-40ba30c8d3cc",
+              "name": "ruta",
+              "value": "ANALIZAR_RECLAMO",
+              "type": "string"
+            },
+            {
+              "id": "775af392-383f-41ae-bdc4-e7749a31a432",
+              "name": "respuestaPropuesta",
+              "value": "={{ $('Analizador - Evaluar Reclamo').first().json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "415cda5d-0a1e-448f-989b-367965800877",
+              "name": "contextoVerificable",
+              "value": "={{ $('Entrada - Desde Manager').first().json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        0
+      ],
+      "id": "79851be6-6d85-4df3-8886-668706b53ba1",
+      "name": "Preparar Salida - Analizador"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada - Desde Manager": {
+      "main": [
+        [
+          {
+            "node": "Analizador - Evaluar Reclamo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Analizador": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analizador - Evaluar Reclamo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analizador - Evaluar Reclamo": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida - Analizador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

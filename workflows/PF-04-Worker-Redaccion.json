@@ -1,0 +1,160 @@
+{
+  "name": "PF - 04 - Worker Redacción",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "traceId"
+            },
+            {
+              "name": "requestId"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ac8bb7af-ecaa-45bb-85ca-ab1e12636930",
+      "name": "Entrada - Desde Manager"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n{{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\n\\nSOLICITUD DE COMUNICACION:\\n' + $json.mensaje\n}}\n  ",
+        "options": {
+          "systemMessage": "\nROL\n\nSos un especialista en redacción de comunicaciones para el área de Calidad de una empresa logística.\n\nOBJETIVO\n\nPreparar borradores profesionales de correos y mensajes relacionados con reclamos de calidad, utilizando únicamente los datos proporcionados en la solicitud.\n\nREGLAS\n\n- Redactá de forma clara, cordial y profesional.\n- Utilizá exclusivamente la información proporcionada.\n- No inventes fechas, números de envío, nombres, documentos ni hechos.\n- No inventes condiciones de contratos o procedimientos.\n- Si falta información, solicitá los datos necesarios.\n- No atribuyas responsabilidades por daños, faltantes o incumplimientos.\n- No prometas compensaciones, pagos ni coberturas de seguros.\n- No confirmes resoluciones ni cierres definitivos.\n- No afirmes que se realizaron acciones externas.\n- No incluyas afirmaciones documentales que requieran consultar el POE y que no estén respaldadas por información recuperada.\n- No envíes correos ni ejecutes acciones.\n- Todo contenido generado será un borrador sujeto a supervisión y revisión humana.\n\nFORMATO DE RESPUESTA\n\nAsunto:\nIndicá un asunto breve y representativo.\n\nMensaje:\nRedactá el contenido del correo.\n\nSi corresponde, solicitá la información o documentación faltante.\n\nNo agregues datos ficticios.\nNo incluyas explicaciones sobre cómo redactaste el mensaje.\n\nESTILO\n\nUtilizá español profesional de Argentina.\nMantené una redacción natural, breve y respetuosa.\n  "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "280532bd-57d6-45cb-b8fa-b87073cb8c82",
+      "name": "Redactor - Preparar Comunicación"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ],
+      "id": "275b3d80-a131-45c1-b900-2eaf7e20fe04",
+      "name": "OpenRouter Chat Model - Redactor"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e9c2fbf-032f-4772-b376-6cbf4e7cdb1a",
+              "name": "traceId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.traceId }}",
+              "type": "string"
+            },
+            {
+              "id": "7e94830f-c2b4-4368-95f2-4bc396c21a91",
+              "name": "requestId",
+              "value": "={{ $('Entrada - Desde Manager').first().json.requestId }}",
+              "type": "string"
+            },
+            {
+              "id": "1fb9625b-8a88-43cc-906d-535442cc0e6c",
+              "name": "consultaOriginal",
+              "value": "={{ $('Entrada - Desde Manager').first().json.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "1ae2edaf-f2c2-4dbd-85eb-83e4112f020d",
+              "name": "ruta",
+              "value": "REDACTAR_COMUNICACION",
+              "type": "string"
+            },
+            {
+              "id": "25ebff46-674a-48f9-b747-1a919f5870c7",
+              "name": "respuestaPropuesta",
+              "value": "={{ $('Redactor - Preparar Comunicación').first().json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "bab57622-7536-4708-9d78-c006b4e605b4",
+              "name": "contextoVerificable",
+              "value": "={{ $('Entrada - Desde Manager').first().json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        0
+      ],
+      "id": "a7ed6ca6-0817-435d-beda-1710cfb7d12d",
+      "name": "Preparar Salida - Redactor"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada - Desde Manager": {
+      "main": [
+        [
+          {
+            "node": "Redactor - Preparar Comunicación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Redactor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactor - Preparar Comunicación",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactor - Preparar Comunicación": {
+      "main": [
+        [
+          {
+            "node": "Preparar Salida - Redactor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

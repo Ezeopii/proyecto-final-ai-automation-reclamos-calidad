@@ -1,0 +1,1082 @@
+{
+  "name": "PF - 01 - Procesamiento Manager",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "traceId"
+            },
+            {
+              "name": "requestId"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a86ca491-d27a-4226-a147-dad780771078",
+      "name": "Entrada - Desde Orquestador"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\n{{\n'TRACE ID: ' + $json.traceId +\n'\\nREQUEST ID: ' + $json.requestId +\n'\\n\\nSOLICITUD RECIBIDA:\\n' + $json.mensaje\n}}\n  ",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\nROL\nSos el Manager de un sistema para la Gestión de Reclamos de Calidad.\n\nOBJETIVO\nAnalizá la solicitud y decidí qué especialista debe intervenir.\n\nRUTAS DISPONIBLES\n\nCONSULTAR_DOCUMENTACION\nCuando se necesita consultar POE, IO, contratos, procedimientos o documentación corporativa para responder o decidir cómo proceder.\n\nANALIZAR_RECLAMO\nCuando se informa un incidente y se necesita identificar datos, detectar faltantes u organizar la gestión inicial.\n\nREDACTAR_COMUNICACION\nCuando el pedido principal es preparar o mejorar una comunicación relacionada con un reclamo.\n\nREGLAS\n- Elegí una sola ruta principal.\n- Considerá el contexto completo, no palabras aisladas.\n- Si un incidente requiere consultar procedimientos para saber cómo actuar, priorizá CONSULTAR_DOCUMENTACION.\n- Si no hay información suficiente para clasificar, usá ANALIZAR_RECLAMO.\n- No inventes información.\n- No respondas al cliente.\n- No tomes decisiones sobre responsabilidad, seguros, pagos ni cierre final.\n- Conservá traceId y requestId.\n- Respondé únicamente mediante el formato estructurado establecido.\n  "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e001c691-147f-4903-9f54-a1ae47de72b1",
+      "name": "Manager - Clasificar Solicitud"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"ruta\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"CONSULTAR_DOCUMENTACION\",\n        \"ANALIZAR_RECLAMO\",\n        \"REDACTAR_COMUNICACION\"\n      ]\n    }\n  },\n  \"required\": [\"ruta\"],\n  \"additionalProperties\": false\n}\n  "
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        192
+      ],
+      "id": "d87af094-99e6-4349-8528-61f06e109c57",
+      "name": "Structured Output - Clasificación Manager"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        176
+      ],
+      "id": "c8dd7712-fe0d-42f5-8818-65dcc8cdfcca",
+      "name": "OpenRouter Chat Model - Manager"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "48688bf0-a140-4057-a7db-fe6b4f13da8b",
+                    "leftValue": "={{ $json.output.ruta }}",
+                    "rightValue": "CONSULTAR_DOCUMENTACION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DOCUMENTACION"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "93a9c3b9-ef2e-4972-97f7-9395629d9395",
+                    "leftValue": "={{ $json.output.ruta }}",
+                    "rightValue": "ANALIZAR_RECLAMO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RECLAMO"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bbc6b97f-97ad-445c-81fa-2301700a17bb",
+                    "leftValue": "={{ $json.output.ruta }}",
+                    "rightValue": "REDACTAR_COMUNICACION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "COMUNICACION"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        0
+      ],
+      "id": "08694dc5-5270-43f0-abed-4867a8b8b596",
+      "name": "Switch - Enrutar Especialistas"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RELINK_AFTER_IMPORT",
+          "mode": "list",
+          "cachedResultName": "PF - 02 - Worker Documental"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traceId": "={{ $('Entrada - Desde Orquestador').first().json.traceId }}",
+            "requestId": "={{ $('Entrada - Desde Orquestador').first().json.requestId }}",
+            "mensaje": "={{ $('Entrada - Desde Orquestador').first().json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        -128
+      ],
+      "id": "b1cb6384-8e54-4d81-adcd-90c0a8b936ae",
+      "name": "Ejecutar Worker - Documental"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RELINK_AFTER_IMPORT",
+          "mode": "list",
+          "cachedResultName": "PF - 03 - Worker Análisis de Reclamos"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traceId": "={{ $('Entrada - Desde Orquestador').first().json.traceId }}",
+            "requestId": "={{ $('Entrada - Desde Orquestador').first().json.requestId }}",
+            "mensaje": "={{ $('Entrada - Desde Orquestador').first().json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        48
+      ],
+      "id": "cfb99943-f79f-43e9-9b35-6bc843153806",
+      "name": "Ejecutar Worker - Analizador"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RELINK_AFTER_IMPORT",
+          "mode": "list",
+          "cachedResultName": "PF - 04 - Worker Redacción"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traceId": "={{ $('Entrada - Desde Orquestador').first().json.traceId }}",
+            "requestId": "={{ $('Entrada - Desde Orquestador').first().json.requestId }}",
+            "mensaje": "={{ $('Entrada - Desde Orquestador').first().json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        256
+      ],
+      "id": "fde90075-e013-4927-b9fd-ff8fa0fd1861",
+      "name": "Ejecutar Worker - Redactor"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RELINK_AFTER_IMPORT",
+          "mode": "list",
+          "cachedResultName": "PF - 05 - Supervisor QA"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traceId": "={{ $json.traceId }}",
+            "requestId": "={{ $json.requestId }}",
+            "consultaOriginal": "={{ $json.consultaOriginal }}",
+            "ruta": "={{ $json.ruta }}",
+            "respuestaPropuesta": "={{ $json.respuestaPropuesta }}",
+            "contextoVerificable": "={{ $json.contextoVerificable }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "consultaOriginal",
+              "displayName": "consultaOriginal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ruta",
+              "displayName": "ruta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "respuestaPropuesta",
+              "displayName": "respuestaPropuesta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "contextoVerificable",
+              "displayName": "contextoVerificable",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1184,
+        80
+      ],
+      "id": "992e8282-29d4-4e2d-a734-f7631c8053cd",
+      "name": "Ejecutar Supervisor - QA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "12272588-c757-427d-a157-8f6c0d2daf17",
+              "leftValue": "={{ $json.aprobado === true && $json.estadoFinal === 'AUTORIZADO' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        80
+      ],
+      "id": "7d961e5c-5751-460f-aeb9-8a6ac4bc1c4a",
+      "name": "¿Respuesta Autorizada?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_PF_SOLICITUDES",
+          "mode": "list",
+          "cachedResultName": "PF_Solicitudes"
+        },
+        "filterByFormula": "={{ \"{requestId} = '\" + $('Entrada - Desde Orquestador').first().json.requestId + \"'\" }}",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        80
+      ],
+      "id": "170b4699-0067-4299-a514-787e327bcc30",
+      "name": "Buscar Solicitud Procesada - Airtable"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_PF_SOLICITUDES",
+          "mode": "list",
+          "cachedResultName": "PF_Solicitudes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar Solicitud Procesada - Airtable').first().json.id }}",
+            "estado": "={{\n$('Ejecutar Supervisor - QA').first().json.estadoFinal === 'AUTORIZADO'\n? 'EN_PROCESO'\n: 'PENDIENTE'\n}}",
+            "resultado": "={{ $('Ejecutar Supervisor - QA').first().json.estadoFinal === 'AUTORIZADO' ? 'AUTORIZADO_POR_SUPERVISOR' : 'PENDIENTE_EDICION_HUMANA' }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ERROR",
+                  "value": "ERROR"
+                },
+                {
+                  "name": "EN_PROCESO",
+                  "value": "EN_PROCESO"
+                },
+                {
+                  "name": "COMPLETADO",
+                  "value": "COMPLETADO"
+                },
+                {
+                  "name": "PENDIENTE",
+                  "value": "PENDIENTE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FechaCreacion",
+              "displayName": "FechaCreacion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "resultado",
+              "displayName": "resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "envioRealizado",
+              "displayName": "envioRealizado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "intentos",
+              "displayName": "intentos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "errorDetalle",
+              "displayName": "errorDetalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        80
+      ],
+      "id": "49549116-d32b-4934-9c7e-6bafe7fcd156",
+      "name": "Actualizar Estado Solicitud - Airtable"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3c920309-e5c2-4849-bc93-7915cbdc259c",
+              "leftValue": "={{\n$('Ejecutar Supervisor - QA').first().json.aprobado === true\n&&\n$('Ejecutar Supervisor - QA').first().json.estadoFinal === 'AUTORIZADO'\n&&\n$('Actualizar Estado Solicitud - Airtable').first().json.fields.estado === 'EN_PROCESO'\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2096,
+        80
+      ],
+      "id": "37dd24ab-fc19-4a1b-97a2-dad102d84f2c",
+      "name": "¿Autorizar Acción Externa?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_PF_SOLICITUDES",
+          "mode": "list",
+          "cachedResultName": "PF_Solicitudes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar Solicitud Procesada - Airtable').first().json.id }}",
+            "estado": "COMPLETADO",
+            "resultado": "EMAIL_ENVIADO_CORRECTAMENTE"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ERROR",
+                  "value": "ERROR"
+                },
+                {
+                  "name": "EN_PROCESO",
+                  "value": "EN_PROCESO"
+                },
+                {
+                  "name": "COMPLETADO",
+                  "value": "COMPLETADO"
+                },
+                {
+                  "name": "PENDIENTE",
+                  "value": "PENDIENTE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FechaCreacion",
+              "displayName": "FechaCreacion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "resultado",
+              "displayName": "resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "envioRealizado",
+              "displayName": "envioRealizado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "intentos",
+              "displayName": "intentos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "errorDetalle",
+              "displayName": "errorDetalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2560,
+        -80
+      ],
+      "id": "0e1bc35c-a789-40ce-9abf-336365343deb",
+      "name": "Finalizar Solicitud - Airtable"
+    },
+    {
+      "parameters": {
+        "sendTo": "destinatario@ejemplo.com",
+        "subject": "={{ '✅ Reclamo procesado y autorizado | ' + $('Entrada - Desde Orquestador').first().json.requestId }}",
+        "message": "={{\n'<div style=\"font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#2b2b2b;line-height:1.6;\">' +\n\n'<div style=\"border-bottom:3px solid #00B2B9;padding-bottom:12px;margin-bottom:24px;\">' +\n'<h2 style=\"margin:0;\">✅ Resultado autorizado</h2>' +\n'<p style=\"margin:4px 0 0;color:#666;\">Gestión de Reclamos de Calidad</p>' +\n'</div>' +\n\n'<p>Hola,</p>' +\n\n'<p>El procesamiento del caso finalizó correctamente y la respuesta superó los controles de calidad definidos para el flujo.</p>' +\n\n'<div style=\"background:#f6f7f8;padding:16px;border-radius:8px;margin:22px 0;\">' +\n'<strong>📌 Identificación del caso</strong><br><br>' +\n'<strong>Trace ID:</strong> ' + $('Entrada - Desde Orquestador').first().json.traceId + '<br>' +\n'<strong>Request ID:</strong> ' + $('Entrada - Desde Orquestador').first().json.requestId + '<br>' +\n'<strong>Origen de aprobación:</strong> ' + $('Ejecutar Supervisor - QA').first().json.origenAprobacion +\n'</div>' +\n\n'<h3 style=\"margin-bottom:8px;\">💬 Respuesta validada</h3>' +\n\n'<div style=\"border-left:4px solid #00B2B9;padding:12px 16px;background:#fafafa;white-space:pre-wrap;\">' +\n$('Ejecutar Supervisor - QA').first().json.respuestaFinal +\n'</div>' +\n\n'<p style=\"margin-top:24px;color:#666;font-size:13px;\">' +\n'🔒 La respuesta fue liberada únicamente después de superar el circuito de supervisión y autorización correspondiente.' +\n'</p>' +\n\n'<hr style=\"border:none;border-top:1px solid #ddd;margin:24px 0;\">' +\n\n'<p style=\"font-size:12px;color:#888;margin:0;\">' +\n'Proyecto Final · Asistente para la Gestión de Reclamos de Calidad<br>' +\n'Prueba controlada — no corresponde a una comunicación real con el cliente.' +\n'</p>' +\n\n'</div>'\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2336,
+        -80
+      ],
+      "id": "62d0708e-8091-4eec-a881-f21590a301e2",
+      "name": "Gmail - Enviar Resultado Autorizado"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada - Desde Orquestador": {
+      "main": [
+        [
+          {
+            "node": "Manager - Clasificar Solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manager - Clasificar Solicitud": {
+      "main": [
+        [
+          {
+            "node": "Switch - Enrutar Especialistas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output - Clasificación Manager": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Manager - Clasificar Solicitud",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model - Manager": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Manager - Clasificar Solicitud",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Enrutar Especialistas": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Worker - Documental",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ejecutar Worker - Analizador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ejecutar Worker - Redactor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Worker - Documental": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Supervisor - QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Worker - Analizador": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Supervisor - QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Worker - Redactor": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Supervisor - QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Supervisor - QA": {
+      "main": [
+        [
+          {
+            "node": "¿Respuesta Autorizada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Respuesta Autorizada?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Solicitud Procesada - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Solicitud Procesada - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Solicitud Procesada - Airtable": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado Solicitud - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Estado Solicitud - Airtable": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizar Acción Externa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizar Acción Externa?": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Enviar Resultado Autorizado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Enviar Resultado Autorizado": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Solicitud - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

@@ -1,0 +1,546 @@
+{
+  "name": "PF - 00 - Orquestador Principal",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reclamos-calidad-pf",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5e6cca37-f154-4752-b0f2-980a3fd186fc",
+      "name": "Webhook - Recepción de Reclamos"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a7859be7-3bb0-4606-a924-bbd81ad9d78d",
+              "name": "traceId",
+              "value": "={{ 'PF-' + $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "7a1cfba7-1c94-4331-ae2e-dc7830e8cc25",
+              "name": "requestId",
+              "value": "={{ $json.body?.requestId || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7dd0c3e9-ccc5-4508-8028-2fb908ff44e6",
+              "name": "mensaje",
+              "value": "={{ $json.body?.mensaje || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de0509b3-6104-4214-95f9-0b1d8ef2a069",
+              "name": "timestampInicio",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ec04edf9-7d5b-4e6b-a86a-e3e5d1980aef",
+      "name": "Preparar Solicitud - Trace ID"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=\n{{ JSON.stringify({\n  estado: \"RECIBIDO\",\n  mensaje: \"La solicitud fue registrada y será procesada en segundo plano.\",\n  traceId: $('Preparar Solicitud - Trace ID').first().json.traceId,\n  requestId: $('Preparar Solicitud - Trace ID').first().json.requestId\n}) }}\n  ",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        64
+      ],
+      "id": "c8152ada-e38b-4f57-b7bf-c32fb2f86e17",
+      "name": "Confirmar Recepción - HTTP 202"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "275ae2f4-9fee-4ada-ab85-7b674a0d24f4",
+              "leftValue": "={{ ($json.requestId || '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7396dd0f-ac5e-41d1-b8c2-dcc6dcf83ebc",
+              "leftValue": "={{ ($json.mensaje || '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "dcc00f64-eacf-4cd7-9d99-0cd620862085",
+      "name": "Validar Solicitud - Campos Obligatorios"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_PF_SOLICITUDES",
+          "mode": "list",
+          "cachedResultName": "PF_Solicitudes"
+        },
+        "filterByFormula": "={{ \"{requestId} = '\" + $json.requestId + \"'\" }}",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "14e0de67-9131-4850-b063-adbd243c9181",
+      "name": "Buscar Solicitud Existente - Airtable",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a81429c-5a20-4a4e-a011-51aa8272a7de",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        -16
+      ],
+      "id": "62adc543-98a3-4a69-8bd3-9ae6fb5484c9",
+      "name": "¿Solicitud Existente"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Memoria Reclamos Calidad"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID_PF_SOLICITUDES",
+          "mode": "list",
+          "cachedResultName": "PF_Solicitudes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envioRealizado": false,
+            "requestId": "={{ $('Preparar Solicitud - Trace ID').first().json.requestId }}",
+            "traceId": "={{ $('Preparar Solicitud - Trace ID').first().json.traceId }}",
+            "mensaje": "={{ $('Preparar Solicitud - Trace ID').first().json.mensaje }}",
+            "estado": "PENDIENTE",
+            "intentos": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "ERROR",
+                  "value": "ERROR"
+                },
+                {
+                  "name": "EN_PROCESO",
+                  "value": "EN_PROCESO"
+                },
+                {
+                  "name": "COMPLETADO",
+                  "value": "COMPLETADO"
+                },
+                {
+                  "name": "PENDIENTE",
+                  "value": "PENDIENTE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FechaCreacion",
+              "displayName": "FechaCreacion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "resultado",
+              "displayName": "resultado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "envioRealizado",
+              "displayName": "envioRealizado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "intentos",
+              "displayName": "intentos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "errorDetalle",
+              "displayName": "errorDetalle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        64
+      ],
+      "id": "86ee2180-baea-4cb1-8241-5c1589aa092f",
+      "name": "Registrar Solicitud Pendiente - Airtable"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=\n{{ JSON.stringify({\n  estado: \"SOLICITUD_INVALIDA\",\n  mensaje: \"La solicitud debe incluir requestId y mensaje.\",\n  traceId: $('Preparar Solicitud - Trace ID').first().json.traceId\n}) }}\n  ",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        640,
+        256
+      ],
+      "id": "c1ba2b0c-3478-4f96-b8a9-123e2ff371c2",
+      "name": "Rechazar Solicitud - HTTP 400"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=\n{{ JSON.stringify({\n  estado: \"SOLICITUD_EXISTENTE\",\n  mensaje: \"Este reclamo ya fue recibido. No se generará otro registro.\",\n  requestId: $('Preparar Solicitud - Trace ID').first().json.requestId,\n  traceId: $json.fields?.traceId || $json.traceId,\n  estadoActual: $json.fields?.estado || $json.estado\n}) }}\n  ",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1040,
+        -112
+      ],
+      "id": "ae8afb0f-b9bb-4cb1-9c1c-705a0821579a",
+      "name": "Solicitud Duplicada - HTTP 200"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RELINK_AFTER_IMPORT",
+          "mode": "list",
+          "cachedResultName": "PF - 01 - Procesamiento Manager"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "traceId": "={{ $('Preparar Solicitud - Trace ID').first().json.traceId }}",
+            "requestId": "={{ $('Preparar Solicitud - Trace ID').first().json.requestId }}",
+            "mensaje": "={{ $('Preparar Solicitud - Trace ID').first().json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "traceId",
+              "displayName": "traceId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "requestId",
+              "displayName": "requestId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1424,
+        64
+      ],
+      "id": "a94b38f2-0de9-4001-9ac4-ea456d18e852",
+      "name": "Lanzar Procesamiento - Manager"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Recepción de Reclamos": {
+      "main": [
+        [
+          {
+            "node": "Preparar Solicitud - Trace ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Solicitud - Trace ID": {
+      "main": [
+        [
+          {
+            "node": "Validar Solicitud - Campos Obligatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Solicitud - Campos Obligatorios": {
+      "main": [
+        [
+          {
+            "node": "Buscar Solicitud Existente - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rechazar Solicitud - HTTP 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Solicitud Existente - Airtable": {
+      "main": [
+        [
+          {
+            "node": "¿Solicitud Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Solicitud Existente": {
+      "main": [
+        [
+          {
+            "node": "Solicitud Duplicada - HTTP 200",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Solicitud Pendiente - Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Solicitud Pendiente - Airtable": {
+      "main": [
+        [
+          {
+            "node": "Confirmar Recepción - HTTP 202",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Recepción - HTTP 202": {
+      "main": [
+        [
+          {
+            "node": "Lanzar Procesamiento - Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
